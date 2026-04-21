@@ -1,62 +1,70 @@
 import React, { useState } from 'react'
 import './Quiz.css'
-import QuizQuestion from '../core/QuizQuestion';
+import QuizCore from '../core/QuizCore';
+
+const quizCore = new QuizCore();
 
 interface QuizState {
-  questions: QuizQuestion[]
-  currentQuestionIndex: number
-  selectedAnswer: string | null
-  score: number
+  selectedAnswer: string | null;
+  quizFinished: boolean;
 }
 
 const Quiz: React.FC = () => {
-  const initialQuestions: QuizQuestion[] = [
-    {
-      question: 'What is the capital of France?',
-      options: ['London', 'Berlin', 'Paris', 'Madrid'],
-      correctAnswer: 'Paris',
-    },
-  ];
   const [state, setState] = useState<QuizState>({
-    questions: initialQuestions,
-    currentQuestionIndex: 0,  // Initialize the current question index.
-    selectedAnswer: null,  // Initialize the selected answer.
-    score: 0,  // Initialize the score.
+    selectedAnswer: null,
+    quizFinished: false,
   });
 
   const handleOptionSelect = (option: string): void => {
     setState((prevState) => ({ ...prevState, selectedAnswer: option }));
-  }
-
+  };
 
   const handleButtonClick = (): void => {
-    // Task3: Implement the logic for button click, such as moving to the next question.
-  } 
+    if (state.selectedAnswer === null) return;
 
-  const { questions, currentQuestionIndex, selectedAnswer, score } = state;
-  const currentQuestion = questions[currentQuestionIndex];
+    // Record the answer and update score
+    quizCore.answerQuestion(state.selectedAnswer);
 
-  if (!currentQuestion) {
+    if (quizCore.hasNextQuestion()) {
+      // Move to next question, reset selected answer
+      quizCore.nextQuestion();
+      setState({ selectedAnswer: null, quizFinished: false });
+    } else {
+      // All questions answered — show final score
+      setState({ selectedAnswer: null, quizFinished: true });
+    }
+  };
+
+  // Quiz finished screen
+  if (state.quizFinished) {
     return (
       <div>
         <h2>Quiz Completed</h2>
-        <p>Final Score: {score} out of {questions.length}</p>
+        <p>Final Score: {quizCore.getScore()} out of {quizCore.getTotalQuestions()}</p>
       </div>
     );
   }
+
+  const currentQuestion = quizCore.getCurrentQuestion();
+
+  if (!currentQuestion) {
+    return <div><p>No questions available.</p></div>;
+  }
+
+  const isLastQuestion = !quizCore.hasNextQuestion();
 
   return (
     <div>
       <h2>Quiz Question:</h2>
       <p>{currentQuestion.question}</p>
-    
+
       <h3>Answer Options:</h3>
       <ul>
         {currentQuestion.options.map((option) => (
           <li
             key={option}
             onClick={() => handleOptionSelect(option)}
-            className={selectedAnswer === option ? 'selected' : ''}
+            className={state.selectedAnswer === option ? 'selected' : ''}
           >
             {option}
           </li>
@@ -64,9 +72,11 @@ const Quiz: React.FC = () => {
       </ul>
 
       <h3>Selected Answer:</h3>
-      <p>{selectedAnswer ?? 'No answer selected'}</p>
+      <p>{state.selectedAnswer ?? 'No answer selected'}</p>
 
-      <button onClick={handleButtonClick}>Next Question</button>
+      <button onClick={handleButtonClick} disabled={state.selectedAnswer === null}>
+        {isLastQuestion ? 'Submit' : 'Next Question'}
+      </button>
     </div>
   );
 };
